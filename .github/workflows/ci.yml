@@ -25,7 +25,7 @@ jobs:
           node-version: "20"
 
       - name: Install deps (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential ninja-build pkg-config \
@@ -33,13 +33,13 @@ jobs:
             cabocha libcabocha-dev libcurl4-openssl-dev
 
       - name: Install deps (macOS)
-        if: matrix.os == 'macos-latest'
+        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew update
           brew install ninja pkg-config mecab mecab-ipadic cabocha curl
 
       - name: Install deps (Windows - MSYS2)
-        if: matrix.os == 'windows-latest'
+        if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
         run: |
           pacman -Syu --noconfirm
@@ -47,14 +47,25 @@ jobs:
           pacman -S --noconfirm mingw-w64-x86_64-mecab mingw-w64-x86_64-mecab-ipadic mingw-w64-x86_64-cabocha
           pacman -S --noconfirm mingw-w64-x86_64-curl mingw-w64-x86_64-tree-sitter
 
-      - name: Configure (CMake)
+      - name: Configure (CMake, non-Windows)
+        if: ${{ matrix.os != 'windows-latest' }}
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-        shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
 
-      - name: Build LSP (CMake)
+      - name: Configure (CMake, Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: msys2 {0}
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build LSP (CMake, non-Windows)
+        if: ${{ matrix.os != 'windows-latest' }}
         run: cmake --build build --config Release
-        shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
+
+      - name: Build LSP (CMake, Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: msys2 {0}
+        run: cmake --build build --config Release
 
       - name: Install npm deps (VS Code extension)
         run: npm ci
