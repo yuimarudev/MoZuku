@@ -6,9 +6,7 @@
 #include "text_processor.hpp"
 #include "utf16.hpp"
 
-#ifdef MOZUKU_ENABLE_CABOCHA
 #include <cabocha.h>
-#endif
 #include <cstdlib>
 #include <iostream>
 #include <mecab.h>
@@ -175,7 +173,6 @@ std::vector<Diagnostic> Analyzer::checkGrammar(const std::string &text) {
   return diagnostics;
 }
 
-#ifdef MOZUKU_ENABLE_CABOCHA
 std::vector<DependencyInfo>
 Analyzer::analyzeDependencies(const std::string &text) {
   std::vector<DependencyInfo> dependencies;
@@ -246,12 +243,6 @@ Analyzer::analyzeDependencies(const std::string &text) {
 
   return dependencies;
 }
-#else
-std::vector<DependencyInfo>
-Analyzer::analyzeDependencies(const std::string & /*text*/) {
-  return {};
-}
-#endif
 
 bool Analyzer::isInitialized() const {
   return mecab_manager_ && mecab_manager_->getMeCabTagger() != nullptr;

@@ -81,8 +81,7 @@ target_link_libraries(mozuku-lsp PRIVATE
 )
 
 if(CABOCHA_FOUND)
-  target_link_libraries(mozuku-lsp PRIVATE cabocha_system)
-  target_compile_definitions(mozuku-lsp PRIVATE MOZUKU_ENABLE_CABOCHA)
+  target_link_libraries(mozuku-lsp PRIVATE cabocha_system ${CABOCHA_LIBRARIES})
 endif()
 target_include_directories(mozuku-lsp PRIVATE ${TREESITTER_INCLUDE_DIRS})
 target_compile_options(mozuku-lsp PRIVATE ${TREESITTER_CFLAGS_OTHER})

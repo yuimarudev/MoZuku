@@ -31,7 +31,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential ninja-build pkg-config \
-            mecab libmecab-dev mecab-ipadic-utf8 \
             libcurl4-openssl-dev libtree-sitter-dev \
             git autoconf automake libtool patch gettext
 
@@ -39,7 +38,48 @@ jobs:
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           brew update
-          brew install ninja pkg-config mecab mecab-ipadic cabocha curl tree-sitter
+          brew install ninja pkg-config autoconf automake libtool patch gettext curl tree-sitter
+
+      - name: Build CRF++ (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          git clone https://github.com/taku910/crfpp.git
+          cd crfpp
+          patch -p1 < ../crfpp_fix.patch
+          sed -i '' 's/winmain.h //g' Makefile.am Makefile.in
+          sed -i '' '/winmain.h/d' crf_learn.cpp crf_test.cpp
+          ./configure --prefix=/usr/local CXXFLAGS="-std=c++11"
+          make -j2
+          sudo make install
+
+      - name: Build MeCab (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          git clone https://github.com/taku910/mecab.git
+          cd mecab/mecab
+          ./autogen.sh
+          ./configure --prefix=/usr/local --with-charset=UTF8
+          make -j2
+          make check || true
+          sudo make install
+
+      - name: Build MeCab IPADIC (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          cd mecab/mecab-ipadic
+          ./configure --prefix=/usr/local --with-charset=utf8 --with-mecab-config=/usr/local/bin/mecab-config
+          make -j2
+          sudo make install
+
+      - name: Build CaboCha (macOS)
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          git clone https://github.com/taku910/cabocha.git
+          cd cabocha
+          autoreconf -i
+          ./configure --with-charset=utf8 --with-mecab-config=/usr/local/bin/mecab-config --with-crfpp-config=/usr/local/bin/crf-config --prefix=/usr/local CXXFLAGS="-std=c++11"
+          make -j2
+          sudo make install
 
       - name: Install deps (Windows - MSYS2)
         if: ${{ matrix.os == 'windows-latest' }}
@@ -54,11 +94,13 @@ jobs:
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-curl
             mingw-w64-x86_64-tree-sitter
+            mingw-w64-x86_64-libiconv
             git
             autoconf
             automake
             libtool
             make
+            gettext
 
       - name: Install tree-sitter CLI (non-Windows)
         if: ${{ matrix.os != 'windows-latest' }}
@@ -85,8 +127,14 @@ jobs:
           make -j2
           make install
           mkdir -p /mingw64/libexec/mecab
-          if [ -f /mingw64/bin/mecab-dict-index ]; then
-            cp /mingw64/bin/mecab-dict-index /mingw64/libexec/mecab/mecab-dict-index
+          bin_path="$(find /mingw64 -name 'mecab-dict-index*' -maxdepth 6 | head -n1)"
+          if [ -z "$bin_path" ]; then
+            bin_path="$(find ./src -name 'mecab-dict-index*' -maxdepth 3 | head -n1)"
+          fi
+          if [ -n "$bin_path" ]; then
+            install -m 755 "$bin_path" /mingw64/libexec/mecab/mecab-dict-index.exe
+          else
+            echo "mecab-dict-index not found after build" && find /mingw64 -maxdepth 4 -type f | head
           fi
 
       - name: Build MeCab IPADIC (Windows)
@@ -98,9 +146,14 @@ jobs:
           make -j2
           make install
           mkdir -p /mingw64/libexec/mecab
-          bin_path="$(find /mingw64 -name 'mecab-dict-index*' -maxdepth 4 | head -n1)"
+          bin_path="$(find /mingw64 -name 'mecab-dict-index*' -maxdepth 6 | head -n1)"
+          if [ -z "$bin_path" ]; then
+            bin_path="$(find ../mecab/src -name 'mecab-dict-index*' -maxdepth 2 | head -n1)"
+          fi
           if [ -n "$bin_path" ]; then
-            cp "$bin_path" /mingw64/libexec/mecab/mecab-dict-index
+            install -m 755 "$bin_path" /mingw64/libexec/mecab/mecab-dict-index.exe
+          else
+            echo "mecab-dict-index still missing" && find /mingw64 -maxdepth 5 -type f | head
           fi
 
       - name: Build CRF++ (Ubuntu)
@@ -116,13 +169,34 @@ jobs:
           sudo make install
           sudo ldconfig
 
+      - name: Build MeCab (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          git clone https://github.com/taku910/mecab.git
+          cd mecab/mecab
+          ./autogen.sh
+          ./configure --prefix=/usr --with-charset=UTF8
+          make -j2
+          make check || true
+          sudo make install
+          sudo ldconfig
+
+      - name: Build MeCab IPADIC (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          cd mecab/mecab-ipadic
+          ./configure --prefix=/usr --with-charset=utf8 --with-mecab-config=/usr/bin/mecab-config
+          make -j2
+          sudo make install
+          sudo ldconfig
+
       - name: Build CaboCha (Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           git clone https://github.com/taku910/cabocha.git
           cd cabocha
           autoreconf -i
-          ./configure --with-charset=UTF8 --with-mecab-config=/usr/bin/mecab-config --prefix=/usr CXXFLAGS="-std=c++11"
+          ./configure --with-charset=utf-8 --with-mecab-config=/usr/bin/mecab-config --with-crfpp-config=/usr/bin/crf-config --prefix=/usr CXXFLAGS="-std=c++11"
           make -j2
           sudo make install
           sudo ldconfig
@@ -146,6 +220,7 @@ jobs:
         run: |
           git clone https://github.com/taku910/cabocha.git
           cd cabocha
+          autoreconf -i
           ./configure --with-charset=UTF8 --with-mecab-config=/mingw64/bin/mecab-config --with-crfpp-config=/mingw64/bin/crf-config --prefix=/mingw64 CXXFLAGS="-std=c++11"
           make -j2
           make install
@@ -154,14 +229,14 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           cd mozuku-lsp
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_WITH_CABOCHA=OFF
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_WITH_CABOCHA=ON
 
       - name: Configure (CMake, Windows)
         if: ${{ matrix.os == 'windows-latest' }}
         shell: msys2 {0}
         run: |
           cd mozuku-lsp
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_WITH_CABOCHA=OFF
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_WITH_CABOCHA=ON
 
       - name: Build LSP (CMake, non-Windows)
         if: ${{ matrix.os != 'windows-latest' }}

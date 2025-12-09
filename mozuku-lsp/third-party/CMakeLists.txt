@@ -72,51 +72,53 @@ else()
 endif()
 
 if(BUILD_WITH_CABOCHA)
+    set(CABOCHA_FOUND FALSE)
+    set(CABOCHA_INCLUDE_DIRS "")
+    set(CABOCHA_LIBRARIES "")
+    set(CABOCHA_LINK_LIBRARIES "")
+    set(CABOCHA_LIBRARY_DIRS "")
+
     find_program(CABOCHA_CONFIG cabocha-config)
 
     if(CABOCHA_CONFIG)
-        execute_process(
-            COMMAND ${CABOCHA_CONFIG} --libs
-            OUTPUT_VARIABLE CABOCHA_LIBRARIES
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
         execute_process(
             COMMAND ${CABOCHA_CONFIG} --cflags
             OUTPUT_VARIABLE CABOCHA_CFLAGS
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
+        execute_process(
+            COMMAND ${CABOCHA_CONFIG} --libs
+            OUTPUT_VARIABLE CABOCHA_LIBS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
 
         string(REGEX MATCHALL "-I[^ ]*" CABOCHA_INCLUDE_FLAGS "${CABOCHA_CFLAGS}")
-        set(CABOCHA_INCLUDE_DIRS "")
         foreach(flag ${CABOCHA_INCLUDE_FLAGS})
             string(SUBSTRING ${flag} 2 -1 include_dir)
             list(APPEND CABOCHA_INCLUDE_DIRS ${include_dir})
         endforeach()
 
-        string(REGEX MATCHALL "-l[^ ]*" CABOCHA_LIB_FLAGS "${CABOCHA_LIBRARIES}")
-        string(REGEX MATCHALL "-L[^ ]*" CABOCHA_LIB_DIRS "${CABOCHA_LIBRARIES}")
+        if(CABOCHA_LIBS)
+            separate_arguments(CABOCHA_LIB_FLAGS UNIX_COMMAND "${CABOCHA_LIBS}")
+            foreach(flag ${CABOCHA_LIB_FLAGS})
+                if(flag MATCHES "^-L(.+)")
+                    list(APPEND CABOCHA_LIBRARY_DIRS "${CMAKE_MATCH_1}")
+                elseif(flag MATCHES "^-l(.+)")
+                    list(APPEND CABOCHA_LINK_LIBRARIES "${CMAKE_MATCH_1}")
+                endif()
+            endforeach()
+        endif()
 
-        set(CABOCHA_CLEANED_LIBS "")
-        foreach(lib ${CABOCHA_LIB_FLAGS})
-            string(SUBSTRING ${lib} 2 -1 clean_lib)
-            list(APPEND CABOCHA_CLEANED_LIBS ${clean_lib})
-        endforeach()
+        if(CABOCHA_LINK_LIBRARIES)
+            set(CABOCHA_FOUND TRUE)
+            message(STATUS "cabocha-configによりCaboChaを発見:")
+            message(STATUS "  インクルードディレクトリ: ${CABOCHA_INCLUDE_DIRS}")
+            message(STATUS "  ライブラリ: ${CABOCHA_LINK_LIBRARIES}")
+            message(STATUS "  ライブラリディレクトリ: ${CABOCHA_LIBRARY_DIRS}")
+        endif()
+    endif()
 
-        set(CABOCHA_CLEANED_DIRS "")
-        foreach(dir ${CABOCHA_LIB_DIRS})
-            string(SUBSTRING ${dir} 2 -1 clean_dir)
-            list(APPEND CABOCHA_CLEANED_DIRS ${clean_dir})
-        endforeach()
-
-    set(CABOCHA_LIBRARY_DIRS ${CABOCHA_CLEANED_DIRS})
-    set(CABOCHA_LINK_LIBRARIES ${CABOCHA_CLEANED_LIBS})
-    set(CABOCHA_LIBRARIES ${CABOCHA_CLEANED_LIBS})
-
-        set(CABOCHA_FOUND TRUE)
-        message(STATUS "cabocha-configによりCaboChaを発見:")
-        message(STATUS "  インクルードディレクトリ: ${CABOCHA_INCLUDE_DIRS}")
-        message(STATUS "  ライブラリ: ${CABOCHA_LIBRARIES}")
-    else()
+    if(NOT CABOCHA_FOUND)
         message(STATUS "cabocha-configが見つかりません - 標準システムパスを試行中")
         find_path(CABOCHA_INCLUDE_DIRS cabocha.h
             PATHS
@@ -138,12 +140,19 @@ if(BUILD_WITH_CABOCHA)
                 "C:/cabocha/sdk"
             NO_DEFAULT_PATH)
         if(CABOCHA_INCLUDE_DIRS AND CABOCHA_LIBRARIES)
+            set(CABOCHA_LINK_LIBRARIES ${CABOCHA_LIBRARIES})
             set(CABOCHA_FOUND TRUE)
             message(STATUS "システムパスでCaboChaを発見:")
             message(STATUS "  ヘッダー: ${CABOCHA_INCLUDE_DIRS}")
             message(STATUS "  ライブラリ: ${CABOCHA_LIBRARIES}")
         endif()
     endif()
+else()
+    set(CABOCHA_FOUND FALSE)
+    set(CABOCHA_INCLUDE_DIRS "")
+    set(CABOCHA_LIBRARIES "")
+    set(CABOCHA_LINK_LIBRARIES "")
+    set(CABOCHA_LIBRARY_DIRS "")
 endif()
 
 find_path(CRFPP_INCLUDE_DIRS crfpp.h
@@ -184,6 +193,7 @@ set(MECAB_LIBRARIES ${MECAB_LIBRARIES} PARENT_SCOPE)
 set(CABOCHA_FOUND ${CABOCHA_FOUND} PARENT_SCOPE)
 set(CABOCHA_INCLUDE_DIRS ${CABOCHA_INCLUDE_DIRS} PARENT_SCOPE)
 set(CABOCHA_LIBRARIES ${CABOCHA_LINK_LIBRARIES} PARENT_SCOPE)
+set(CABOCHA_LIBRARY_DIRS ${CABOCHA_LIBRARY_DIRS} PARENT_SCOPE)
 
 set(CRFPP_FOUND ${CRFPP_FOUND} PARENT_SCOPE)
 set(CRFPP_INCLUDE_DIRS ${CRFPP_INCLUDE_DIRS} PARENT_SCOPE)
@@ -219,24 +229,22 @@ endif()
 if(CABOCHA_FOUND)
     add_library(cabocha_system INTERFACE IMPORTED GLOBAL)
 
-    if(CABOCHA_CONFIG)
-        if(CABOCHA_INCLUDE_DIRS)
-            target_include_directories(cabocha_system INTERFACE ${CABOCHA_INCLUDE_DIRS})
-        endif()
-        if(CABOCHA_LIBRARY_DIRS)
-            target_link_directories(cabocha_system INTERFACE ${CABOCHA_LIBRARY_DIRS})
-        endif()
-        if(CABOCHA_LINK_LIBRARIES)
-            target_link_libraries(cabocha_system INTERFACE ${CABOCHA_LINK_LIBRARIES})
-        endif()
-    else()
+    if(CABOCHA_INCLUDE_DIRS)
         target_include_directories(cabocha_system INTERFACE ${CABOCHA_INCLUDE_DIRS})
+    endif()
+    if(CABOCHA_LIBRARY_DIRS)
+        target_link_directories(cabocha_system INTERFACE ${CABOCHA_LIBRARY_DIRS})
+    endif()
+    if(CABOCHA_LINK_LIBRARIES)
+        target_link_libraries(cabocha_system INTERFACE ${CABOCHA_LINK_LIBRARIES})
+    elseif(CABOCHA_LIBRARIES)
         target_link_libraries(cabocha_system INTERFACE ${CABOCHA_LIBRARIES})
     endif()
 
     if(CRFPP_FOUND AND CRFPP_LIBRARIES)
         get_filename_component(CRFPP_LIB_DIR ${CRFPP_LIBRARIES} DIRECTORY)
         target_link_directories(cabocha_system INTERFACE ${CRFPP_LIB_DIR})
+        target_link_libraries(cabocha_system INTERFACE ${CRFPP_LIBRARIES})
     endif()
 
     message(STATUS "cabocha_systemターゲットを作成")

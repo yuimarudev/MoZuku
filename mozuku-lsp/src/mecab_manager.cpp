@@ -1,7 +1,5 @@
 #include "mecab_manager.hpp"
-#ifdef MOZUKU_ENABLE_CABOCHA
 #include <cabocha.h>
-#endif
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -32,12 +30,10 @@ MeCabManager::MeCabManager(bool enableCaboCha)
 }
 
 MeCabManager::~MeCabManager() {
-#ifdef MOZUKU_ENABLE_CABOCHA
   if (cabocha_parser_) {
     cabocha_destroy(cabocha_parser_);
     cabocha_parser_ = nullptr;
   }
-#endif
   if (mecab_tagger_) {
     delete mecab_tagger_;
     mecab_tagger_ = nullptr;
@@ -111,7 +107,6 @@ bool MeCabManager::initialize(const std::string &mecabDicPath,
               << system_charset_ << std::endl;
   }
 
-#ifdef MOZUKU_ENABLE_CABOCHA
   if (enable_cabocha_) {
     SystemLibInfo systemCabocha = detectSystemCaboCha();
     if (systemCabocha.isAvailable) {
@@ -132,7 +127,6 @@ bool MeCabManager::initialize(const std::string &mecabDicPath,
       std::cerr << "[DEBUG] CaboCha not available on system" << std::endl;
     }
   }
-#endif
 
   if (isDebugEnabled()) {
     std::cerr << "[DEBUG] MeCabManager initialized - MeCab: "
