@@ -77,9 +77,13 @@ target_link_libraries(mozuku-lsp PRIVATE
   tree_sitter_lang_tsx
   tree_sitter_lang_latex
   mecab_system
-  cabocha_system
   CURL::libcurl
 )
+
+if(CABOCHA_FOUND)
+  target_link_libraries(mozuku-lsp PRIVATE cabocha_system)
+  target_compile_definitions(mozuku-lsp PRIVATE MOZUKU_ENABLE_CABOCHA)
+endif()
 target_include_directories(mozuku-lsp PRIVATE ${TREESITTER_INCLUDE_DIRS})
 target_compile_options(mozuku-lsp PRIVATE ${TREESITTER_CFLAGS_OTHER})
 target_link_libraries(mozuku-lsp PRIVATE ${TREESITTER_LIBRARIES})
