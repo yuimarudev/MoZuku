@@ -148,14 +148,29 @@ if(NOT CABOCHA_FOUND)
     message(STATUS "  CABOCHA_INCLUDE_HINT: ${CABOCHA_INCLUDE_HINT}")
     message(STATUS "  CABOCHA_LIBRARY_HINT: ${CABOCHA_LIBRARY_HINT}")
 
-    # まずHINTSのみで検索（NO_DEFAULT_PATHで他のパスを無視）
-    if(CABOCHA_INCLUDE_HINT)
+    # HINTSが設定されている場合、直接ファイルの存在を確認
+    if(CABOCHA_INCLUDE_HINT AND EXISTS "${CABOCHA_INCLUDE_HINT}/cabocha.h")
+        set(CABOCHA_INCLUDE_DIRS "${CABOCHA_INCLUDE_HINT}")
+        message(STATUS "  cabocha.h を直接発見: ${CABOCHA_INCLUDE_DIRS}")
+    endif()
+    if(CABOCHA_LIBRARY_HINT)
+        if(EXISTS "${CABOCHA_LIBRARY_HINT}/libcabocha.lib")
+            set(CABOCHA_LIBRARIES "${CABOCHA_LIBRARY_HINT}/libcabocha.lib")
+            message(STATUS "  libcabocha.lib を直接発見: ${CABOCHA_LIBRARIES}")
+        elseif(EXISTS "${CABOCHA_LIBRARY_HINT}/cabocha.lib")
+            set(CABOCHA_LIBRARIES "${CABOCHA_LIBRARY_HINT}/cabocha.lib")
+            message(STATUS "  cabocha.lib を直接発見: ${CABOCHA_LIBRARIES}")
+        endif()
+    endif()
+
+    # 直接発見できなければ find_path/find_library を試す
+    if(NOT CABOCHA_INCLUDE_DIRS AND CABOCHA_INCLUDE_HINT)
         find_path(CABOCHA_INCLUDE_DIRS cabocha.h
             HINTS "${CABOCHA_INCLUDE_HINT}"
             NO_DEFAULT_PATH
         )
     endif()
-    if(CABOCHA_LIBRARY_HINT)
+    if(NOT CABOCHA_LIBRARIES AND CABOCHA_LIBRARY_HINT)
         find_library(CABOCHA_LIBRARIES
             NAMES libcabocha cabocha
             HINTS "${CABOCHA_LIBRARY_HINT}"
