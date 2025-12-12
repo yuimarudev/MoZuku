@@ -271,42 +271,9 @@ jobs:
         run: |
           git clone https://github.com/taku910/cabocha.git
           cd cabocha
-          printf '%s\n' \
-            'diff --git a/src/common.h b/src/common.h' \
-            '--- a/src/common.h' \
-            '+++ b/src/common.h' \
-            '@@' \
-            '-#include <string>' \
-            '-using std::string;' \
-            '-using std::vector;' \
-            '-using std::ostream;' \
-            '-using std::istream;' \
-            '-using std::stringstream;' \
-            '-using std::hash_map;' \
-            '+#include <string>' \
-            '+#include <unordered_map>' \
-            '+#ifdef _WIN32' \
-            '+#include <windows.h>' \
-            '+inline std::wstring Utf8ToWideWin(const char *input) {' \
-            '+  if (!input) return std::wstring();' \
-            '+  int len = MultiByteToWideChar(CP_UTF8, 0, input, -1, NULL, 0);' \
-            '+  if (len <= 0) return std::wstring();' \
-            '+  std::wstring w(len, L''\\0'');' \
-            '+  MultiByteToWideChar(CP_UTF8, 0, input, -1, &w[0], len);' \
-            '+  if (!w.empty() && w.back() == L''\\0'') w.pop_back();' \
-            '+  return w;' \
-            '+}' \
-            '+#undef WPATH' \
-            '+#define WPATH(path) (CaboCha::Utf8ToWideWin(path).c_str())' \
-            '+#endif' \
-            '+using std::string;' \
-            '+using std::vector;' \
-            '+using std::ostream;' \
-            '+using std::istream;' \
-            '+using std::stringstream;' \
-            '+using std::unordered_map;' \
-            > /tmp/cabocha_win_fix.patch
-          patch -p1 < /tmp/cabocha_win_fix.patch
+          pattern=$'#include <string>\nusing std::string;\nusing std::vector;\nusing std::ostream;\nusing std::istream;\nusing std::stringstream;\nusing std::hash_map;\n'
+          replacement=$'#include <string>\n#include <unordered_map>\n#ifdef _WIN32\n#include <windows.h>\ninline std::wstring Utf8ToWideWin(const char *input) {\n  if (!input) return std::wstring();\n  int len = MultiByteToWideChar(CP_UTF8, 0, input, -1, NULL, 0);\n  if (len <= 0) return std::wstring();\n  std::wstring w(len, L'\\0');\n  MultiByteToWideChar(CP_UTF8, 0, input, -1, &w[0], len);\n  if (!w.empty() && w.back() == L'\\0') w.pop_back();\n  return w;\n}\n#undef WPATH\n#define WPATH(path) (CaboCha::Utf8ToWideWin(path).c_str())\n#endif\nusing std::string;\nusing std::vector;\nusing std::ostream;\nusing std::istream;\nusing std::stringstream;\nusing std::unordered_map;\n'
+          perl -0777 -i -pe "s|\Q${pattern}\E|${replacement}|ms" src/common.h
           autoreconf -i
           ./configure --with-charset=UTF8 --with-mecab-config=/mingw64/bin/mecab-config --with-crfpp-config=/mingw64/bin/crf-config --prefix=/mingw64 CXXFLAGS="-std=c++11"
           make -j2
