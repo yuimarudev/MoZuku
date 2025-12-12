@@ -68,6 +68,11 @@ add_executable(mozuku-lsp ${MOZUKU_SOURCES})
 
 target_include_directories(mozuku-lsp PRIVATE include)
 
+# Windows: min/max マクロを無効化して std::min/std::max との競合を防ぐ
+if(WIN32)
+  target_compile_definitions(mozuku-lsp PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
+
 target_link_libraries(mozuku-lsp PRIVATE
   nlohmann_json::nlohmann_json
   tree_sitter_lang_c
