@@ -388,21 +388,6 @@ jobs:
           nmake -f Makefile.msvc
           Pop-Location
 
-      - name: Build CaboCha IPA models (UTF-8)
-        if: ${{ matrix.os == 'windows' }}
-        shell: pwsh
-        working-directory: cabocha
-        run: |
-          Push-Location model
-
-          ..\src\cabocha-model-index.exe -f UTF-8 -t UTF-8 dep.ipa.txt dep.ipa.model
-          ..\src\cabocha-model-index.exe -f UTF-8 -t UTF-8 chunk.ipa.txt chunk.ipa.model
-          ..\src\cabocha-model-index.exe -f UTF-8 -t UTF-8 ne.ipa.txt ne.ipa.model
-
-          "UTF-8" | Out-File -FilePath charset-file.txt -Encoding ascii
-
-          Pop-Location
-
       - name: Upload CaboCha MSVC artifacts
         if: ${{ matrix.os == 'windows' }}
         uses: actions/upload-artifact@v4
@@ -414,8 +399,6 @@ jobs:
             cabocha/src/*.dll
             cabocha/src/*.lib
             cabocha/src/win32/libcrfpp.dll
-            cabocha/model/*.model
-            cabocha/model/charset-file.txt
 
       - name: Configure (CMake, non-Windows)
         if: ${{ matrix.os != 'windows' }}
