@@ -315,6 +315,10 @@ jobs:
           $common = [regex]::Replace($common, $dupPattern, "", 'Singleline')
           Set-Content -LiteralPath "common.h" -Value $common -NoNewline -Encoding ascii
 
+          # winmain.h への依存を削除
+          (Get-Content -LiteralPath "crf_learn.cpp" -Raw) -replace '#include \"winmain.h\"\s*', "" | Set-Content -LiteralPath "crf_learn.cpp" -NoNewline -Encoding ascii
+          (Get-Content -LiteralPath "crf_test.cpp" -Raw) -replace '#include \"winmain.h\"\s*', "" | Set-Content -LiteralPath "crf_test.cpp" -NoNewline -Encoding ascii
+
           nmake -f Makefile.msvc clean
           nmake -f Makefile.msvc
 
