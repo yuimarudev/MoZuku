@@ -349,7 +349,7 @@ jobs:
 
           # Read file as lines and rebuild, skipping DEFS continuation lines
           $lines = Get-Content -LiteralPath "src/Makefile.msvc.in"
-          $newDefs = "DEFS = -D_CRT_SECURE_NO_DEPRECATE -DDLL_EXPORT -DHAVE_GETENV -DUNICODE -D_UNICODE -DHAVE_WINDOWS_H -DHAVE_STRING_H -DHAVE_MEMSET " +
+          $newDefs = "DEFS = -D_CRT_SECURE_NO_DEPRECATE -D_SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS -DDLL_EXPORT -DHAVE_GETENV -DUNICODE -D_UNICODE -DHAVE_WINDOWS_H -DHAVE_STRING_H -DHAVE_MEMSET " +
                      "-DMODEL_VERSION=$modelVersion -DVERSION=`"`"$version`"`" -DPACKAGE=`"`"cabocha`"`" -DCABOCHA_DEFAULT_RC=`"`"c:\cabocha\etc\cabocharc`"`" -DCABOCHA_DEFAULT_CHARSET=`"`"UTF-8`"`""
 
           $output = @()
