@@ -48,24 +48,28 @@ MeCabManager::~MeCabManager() {
 
 bool MeCabManager::initialize(const std::string &mecabDicPath,
                               const std::string &mecabCharset) {
-  SystemLibInfo systemMeCab = detectSystemMeCab();
-  if (!systemMeCab.isAvailable) {
-    if (isDebugEnabled()) {
-      std::cerr << "[ERROR] System MeCab not detected" << std::endl;
+   SystemLibInfo systemMeCab;
+  if (mecabDicPath.empty()) {
+    systemMeCab = detectSystemMeCab();
+    if (!systemMeCab.isAvailable && isDebugEnabled()) {
+      std::cerr << "[DEBUG] Cannot find mecab-config / dicdir" << std::endl;
     }
-    return false;
+  } else {
+    systemMeCab.isAvailable = true;
   }
 
   if (!mecabCharset.empty()) {
     system_charset_ = mecabCharset;
-  } else {
+  } else if (!systemMeCav.charset.empty()) {
     system_charset_ = systemMeCab.charset;
+  } else {
+    system_charset_ = "UTF-8";
   }
 
   std::string mecab_args;
   if (!mecabDicPath.empty()) {
     mecab_args = "-d " + mecabDicPath;
-  } else if (!systemMeCab.dicPath.empty()) {
+  } else if (systemMeCab.isAvailable && !systemMeCab.dicPath.empty()) {
     mecab_args = "-d " + systemMeCab.dicPath + "/ipadic";
     if (isDebugEnabled()) {
       std::cerr << "[DEBUG] Using detected MeCab dicdir: "
@@ -113,24 +117,16 @@ bool MeCabManager::initialize(const std::string &mecabDicPath,
               << system_charset_ << std::endl;
   }
 
-  if (enable_cabocha_) {
-    SystemLibInfo systemCabocha = detectSystemCaboCha();
-    if (systemCabocha.isAvailable) {
-      cabocha_parser_ = cabocha_new2("");
-      if (cabocha_parser_) {
-        cabocha_available_ = true;
-        if (isDebugEnabled()) {
-          std::cerr << "[DEBUG] CaboCha successfully initialized" << std::endl;
-        }
-      } else {
-        const char *error = cabocha_strerror(nullptr);
-        if (isDebugEnabled()) {
-          std::cerr << "[DEBUG] CaboCha initialization failed: "
-                    << (error ? error : "Unknown error") << std::endl;
-        }
+  if (cabocha_parser_) {
+      cabocha_available_ = true;
+      if (isDebugEnabled()) {
+        std::cerr << "[DEBUG] CaboCha successfully initialized" << std::endl;
       }
-    } else if (isDebugEnabled()) {
-      std::cerr << "[DEBUG] CaboCha not available on system" << std::endl;
+    } else {
+      const char *error = cabocha_strerror(nullptr);
+      if (isDebugEnabled()) {
+        std::cerr << "[DEBUG] CaboCha initialization failed: "
+                  << (error ? error : "Unknown error") << std::endl;
     }
   }
 
