@@ -60,7 +60,7 @@ bool MeCabManager::initialize(const std::string &mecabDicPath,
 
   if (!mecabCharset.empty()) {
     system_charset_ = mecabCharset;
-  } else if (!systemMeCav.charset.empty()) {
+  } else if (!systemMeCab.charset.empty()) {
     system_charset_ = systemMeCab.charset;
   } else {
     system_charset_ = "UTF-8";
